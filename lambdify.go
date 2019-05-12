@@ -18,8 +18,7 @@ func Lambdify(mux http.Handler) func(events.ALBTargetGroupRequest) (events.ALBTa
 		}
 		queries = strings.Replace(queries, "&", "?", 1)
 
-		// path := strings.TrimPrefix(ev.Path, "/badlibs")
-		path := ev.Path
+		path := ev.Path[strings.Index(strings.TrimLeft(ev.Path, "/"), "/")+1:]
 
 		req, err := http.NewRequest(ev.HTTPMethod, path+queries, strings.NewReader(ev.Body))
 		if err != nil {
