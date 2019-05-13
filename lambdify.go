@@ -1,7 +1,10 @@
 package lambdify
 
 import (
+	"bytes"
+	"encoding/base64"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,19 +23,30 @@ func Lambdify(mux http.Handler) func(events.ALBTargetGroupRequest) (events.ALBTa
 
 		path := ev.Path[strings.Index(strings.TrimLeft(ev.Path, "/"), "/")+1:]
 
-		req, err := http.NewRequest(ev.HTTPMethod, path+queries, strings.NewReader(ev.Body))
-		if err != nil {
-			return events.ALBTargetGroupResponse{
-				StatusCode:        http.StatusInternalServerError,
-				StatusDescription: "500 Internal Server Error",
-				Body:              err.Error(),
-				IsBase64Encoded:   false,
-			}, nil
+		var body io.Reader
+		var contentType string
+		if ev.IsBase64Encoded {
+			data, err := base64.StdEncoding.DecodeString(ev.Body)
+			if err != nil {
+				return lambdifyError(err), nil
+			}
+			body = bytes.NewReader(data)
+			contentType = "application/x-www-form-urlencoded"
+		} else {
+			body = strings.NewReader(ev.Body)
+			contentType = "application/json"
 		}
+
+		req, err := http.NewRequest(ev.HTTPMethod, path+queries, body)
+		if err != nil {
+			return lambdifyError(err), nil
+		}
+		req.Header.Add("Content-Type", contentType)
 
 		rr := httptest.NewRecorder()
 		mux.ServeHTTP(rr, req)
 		headers := map[string]string{"Content-Type": "application/json"}
+
 		multiValueHeaders := make(map[string][]string)
 		for k, v := range rr.Result().Header {
 			if len(v) > 1 {
@@ -49,5 +63,14 @@ func Lambdify(mux http.Handler) func(events.ALBTargetGroupRequest) (events.ALBTa
 			Headers:           headers,
 			MultiValueHeaders: multiValueHeaders,
 		}, nil
+	}
+}
+
+func lambdifyError(err error) events.ALBTargetGroupResponse {
+	return events.ALBTargetGroupResponse{
+		StatusCode:        http.StatusInternalServerError,
+		StatusDescription: "500 Internal Server Error",
+		Body:              err.Error(),
+		IsBase64Encoded:   false,
 	}
 }
