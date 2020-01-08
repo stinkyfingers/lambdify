@@ -19,6 +19,13 @@ func mux() http.Handler {
 
 Lambdify that handler in your lambda `main()` function
 ```
+package main
+
+import (
+	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/stinkyfingers/lambdify"
+)
+
 func main() {
 	lambdaFunction := lambdify.Lambdify(mux())
 	lambda.Start(lambdaFunction)
