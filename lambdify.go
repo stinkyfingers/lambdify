@@ -42,7 +42,9 @@ func Lambdify(mux http.Handler) func(events.ALBTargetGroupRequest) (events.ALBTa
 			return lambdifyError(err), nil
 		}
 		req.Header.Add("Content-Type", contentType)
-
+		for k, v := range ev.Headers {
+			req.Header.Add(k, v)
+		}
 		rr := httptest.NewRecorder()
 		mux.ServeHTTP(rr, req)
 		headers := map[string]string{"Content-Type": "application/json"}
