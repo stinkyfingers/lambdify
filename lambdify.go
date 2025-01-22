@@ -21,7 +21,7 @@ func Lambdify(mux http.Handler) func(events.ALBTargetGroupRequest) (events.ALBTa
 		}
 		queries = strings.Replace(queries, "&", "?", 1)
 
-		path := ev.Path[strings.Index(strings.TrimLeft(ev.Path, "/"), "/")+1:]
+		path := ev.Path[strings.Index(strings.TrimLeft(ev.Path, "/"), "/")+1:] // TODO danger and only applicable in unique ALB situations
 
 		var body io.Reader
 		var contentType string
@@ -60,8 +60,8 @@ func Lambdify(mux http.Handler) func(events.ALBTargetGroupRequest) (events.ALBTa
 		return events.ALBTargetGroupResponse{
 			Body:              rr.Body.String(),
 			IsBase64Encoded:   false,
-			StatusCode:        http.StatusOK,
-			StatusDescription: "200 OK",
+			StatusCode:        rr.Code,
+			StatusDescription: rr.Result().Status,
 			Headers:           headers,
 			MultiValueHeaders: multiValueHeaders,
 		}, nil
